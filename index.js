@@ -7,6 +7,7 @@ import { Shader } from "./rendering/core/Shader.js";
 import { Renderer } from "./rendering/core/Renderer.js";
 import { OrbitCamera } from "./rendering/core/OrbitCamera.js";
 import { Model } from "./rendering/core/Model.js";
+import { Texture } from "./rendering/core/Texture.js"; 
 // 아래 두개가 최소한으로 필요한 셰이더
 import basicVertex from "./resources/shaders/basicVertex.js";
 import basicFragment from "./resources/shaders/basicFragment.js";
@@ -25,6 +26,12 @@ async function main(){
   if (!gl) {
     return;
   }
+
+  let checkerTexture = new Texture(gl);
+  checkerTexture.LoadTexture("./resources/textures/CustomUVChecker_byValle_2K.png");
+
+  let externalTexture = new Texture(gl);
+  externalTexture.LoadTexture("https://c1.staticflickr.com/9/8873/18598400202_3af67ef38f_q.jpg");
 
   let cubeModel = new Model(gl);
   await cubeModel.LoadModel("./resources/models/cube.obj");
@@ -136,12 +143,15 @@ async function main(){
         program.SetUniformMatrix4fv("u_view", camera.GetViewMatrix());
         program.SetUniformMatrix4fv("u_projection", projectionMatrix);
         // program.SetUniform4f("u_color", 0.8, 0.3, 0.8, 1.0);
-
+        externalTexture.Bind(0);
+        program.SetUniform1i("u_texture", 0);
         cubeModel.RenderModel(renderer);
 
         modelMatrix = mat4.create();
         mat4.scale(modelMatrix, modelMatrix, [0.1, 0.1, 0.1]);
         program.SetUniformMatrix4fv("u_model", modelMatrix);
+        checkerTexture.Bind(0);
+        program.SetUniform1i("u_texture", 0);
         teapotModel.RenderModel(renderer);
 
     }

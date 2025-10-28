@@ -7,8 +7,11 @@ layout(location=0) out vec4 outColor;
 in vec2 v_texCoord;
 in vec3 v_normal;
 
+uniform sampler2D u_texture;
+
 void main() {
-    outColor = vec4(1.0, 0.0, 0.0, 1.0);
+    vec4 normal = normalize(vec4(v_normal, 1.0));
+    outColor = texture(u_texture, v_texCoord);
 }`;
 // Fragment shader - 픽셀마다 색상을 결정하는 셰이더(픽셀 수만큼 병렬실행)
 // outColor라는 이름의 출력 변수 선언
