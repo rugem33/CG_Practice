@@ -47,6 +47,18 @@ export class Shader{
         this.gl.uniform4f(location, v0, v1, v2, v3);
     }
     
+    SetUniform3f(name, v0, v1, v2)
+    {
+        let location = this.GetUniformLocation(name);
+        this.gl.uniform3f(location, v0, v1, v2);
+    }
+
+    SetUniform1f(name, v)
+    {
+        let location = this.GetUniformLocation(name);
+        this.gl.uniform1f(location, v);
+    }
+
     SetUniformMatrix4fv(name, mat)
     {
         let location = this.GetUniformLocation(name);
@@ -56,5 +68,17 @@ export class Shader{
     SetUniform1i(name, value){
         let location = this.GetUniformLocation(name);
         this.gl.uniform1i(location, value);
+    }
+
+    SetLight(light) {
+        this.SetUniform3f("u_directionalLight.base.color", light.lightColor[0], light.lightColor[1], light.lightColor[2]);
+        this.SetUniform3f("u_directionalLight.direction", light.direction[0], light.direction[1], light.direction[2]);
+        this.SetUniform1f("u_directionalLight.base.diffuseIntensity", light.diffuseIntensity);
+        this.SetUniform1f("u_directionalLight.base.ambientIntensity", light.ambientIntensity);
+    }
+
+    SetMaterial(material) {
+        this.SetUniform1f("u_material.specularIntensity", material.specularIntensity);
+        this.SetUniform1f("u_material.shininess", material.shininess);
     }
 }

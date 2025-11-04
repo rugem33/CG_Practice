@@ -3,9 +3,12 @@ export class Renderer {
 
     constructor(gl) {
         this.gl = gl;
+        gl.enable(gl.DEPTH_TEST);
+        gl.enable(gl.CULL_FACE);
     }
 
     Clear() {
+        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
     }
     // 기존 drawcall 함수 대체

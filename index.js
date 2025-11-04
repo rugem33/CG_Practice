@@ -7,10 +7,13 @@ import { Shader } from "./rendering/core/Shader.js";
 import { Renderer } from "./rendering/core/Renderer.js";
 import { OrbitCamera } from "./rendering/core/OrbitCamera.js";
 import { Model } from "./rendering/core/Model.js";
-import { Texture } from "./rendering/core/Texture.js"; 
+import { Texture } from "./rendering/core/Texture.js";
+import { DirectionalLight } from "./rendering/light/DirectionalLight.js"; 
+import { Material } from "./rendering/core/Material.js";
 // 아래 두개가 최소한으로 필요한 셰이더
 import basicVertex from "./resources/shaders/basicVertex.js";
 import basicFragment from "./resources/shaders/basicFragment.js";
+
 
 
 const {mat4, vec4} = glMatrix;
@@ -30,12 +33,6 @@ async function main(){
   let checkerTexture = new Texture(gl);
   checkerTexture.LoadTexture("./resources/textures/CustomUVChecker_byValle_2K.png");
 
-  let externalTexture = new Texture(gl);
-  externalTexture.LoadTexture("https://c1.staticflickr.com/9/8873/18598400202_3af67ef38f_q.jpg");
-
-  let cubeModel = new Model(gl);
-  await cubeModel.LoadModel("./resources/models/cube.obj");
-
   let teapotModel = new Model(gl);
   await teapotModel.LoadModel("./resources/models/teapot.obj");
 
@@ -44,28 +41,10 @@ async function main(){
 
   let renderer = new Renderer(gl);
 
-  const pitchslider = document.getElementById("pitchslider");
-  pitchslider.addEventListener('input', ()=>{
-    camera.pitch = pitchslider.value;
-    camera.Update();
-  });
-
-  const yawslider = document.getElementById("yawslider");
-  yawslider.addEventListener('input', ()=>{
-    camera.yaw = yawslider.value;
-    camera.Update();
-  });
-
-  const distanceslider = document.getElementById("distanceslider");
-  distanceslider.addEventListener('input', ()=>{
-    camera.distance = distanceslider.value;
-    camera.Update();
-  });
-
   let at = [0,0,0];
-  let yaw = yawslider.value;
-  let pitch = pitchslider.value;
-  let distance = distanceslider.value;
+  let yaw = 90;
+  let pitch = 0;
+  let distance = 5;
   // OrbitCamera 객체 생성
   // at: 카메라가 바라보는 지점, yaw: y축 기준 회전각, pitch: x축 기준 회전각, distance: at 지점으로부터 카메라까지의 거리, turnspeed: 마우스 드래그 시 회전 속도
   let camera = new OrbitCamera(at, yaw, pitch, distance, 0.01);
@@ -77,6 +56,11 @@ async function main(){
   let far = 100.0;
   mat4.perspective(projectionMatrix, fovy, aspect, near, far);
 
+  let light = new DirectionalLight([1.0, 1.0, 1.0], [2.0, 1.0, -2.0], 0.1, 1.0);
+
+  let material = new Material(1.0, 64.0);
+
+  SetupSliders();
   requestAnimationFrame(drawScene);
 
   let rotationAngle = 0.0;
@@ -88,6 +72,7 @@ async function main(){
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
     rotationAngle += 0.1 * Math.PI / 180.0;
+    
 
     //---rectangle buffer Setup---//
     // 실행 가능한 상태의 program을 webgl에 바인딩
@@ -136,22 +121,15 @@ async function main(){
     program.Bind();
     {
         let modelMatrix = mat4.create();
-        mat4.fromYRotation(modelMatrix, rotationAngle);
-        mat4.translate(modelMatrix, modelMatrix, [0.0, 0.0, -3.0]);
-
+        mat4.scale(modelMatrix, modelMatrix, [0.1, 0.1, 0.1]);
         program.SetUniformMatrix4fv("u_model", modelMatrix);
         program.SetUniformMatrix4fv("u_view", camera.GetViewMatrix());
         program.SetUniformMatrix4fv("u_projection", projectionMatrix);
-        // program.SetUniform4f("u_color", 0.8, 0.3, 0.8, 1.0);
-        externalTexture.Bind(0);
-        program.SetUniform1i("u_texture", 0);
-        cubeModel.RenderModel(renderer);
-
-        modelMatrix = mat4.create();
-        mat4.scale(modelMatrix, modelMatrix, [0.1, 0.1, 0.1]);
-        program.SetUniformMatrix4fv("u_model", modelMatrix);
+        program.SetUniform3f("u_eyePosition", camera.eye[0], camera.eye[1], camera.eye[2]);
+        program.SetMaterial(material);
         checkerTexture.Bind(0);
         program.SetUniform1i("u_texture", 0);
+        program.SetLight(light);
         teapotModel.RenderModel(renderer);
 
     }
@@ -160,5 +138,45 @@ async function main(){
     requestAnimationFrame(drawScene);
   }
 
+  function SetupSliders(){
+      const pitchslider = document.getElementById("pitchslider");
+      const yawslider = document.getElementById("yawslider");
+      const distanceslider = document.getElementById("distanceslider");
+      const directionXSlider = document.getElementById("directionx");
+      const directionYSlider = document.getElementById("directiony");
+      const directionZSlider = document.getElementById("directionz");
+      const specularIntensitySlider = document.getElementById("specularIntensity");
+      const shininessSlider = document.getElementById("shininess");
+
+      pitchslider.addEventListener('input', ()=>{
+        camera.pitch = pitchslider.value;
+        camera.Update();
+      });
+      yawslider.addEventListener('input', ()=>{
+        camera.yaw = yawslider.value;
+        camera.Update();
+      });
+      distanceslider.addEventListener('input', ()=>{
+        camera.distance = distanceslider.value;
+        camera.Update();
+      });
+      directionXSlider.addEventListener('input', ()=>{
+        light.direction[0] = directionXSlider.value;
+      });
+      directionYSlider.addEventListener('input', ()=>{
+        light.direction[1] = directionYSlider.value;  
+      });
+      directionZSlider.addEventListener('input', ()=>{
+        light.direction[2] = directionZSlider.value;  
+      });
+      specularIntensitySlider.addEventListener('input', ()=>{
+        material.specularIntensity = specularIntensitySlider.value;  
+      });
+      shininessSlider.addEventListener('input', ()=>{
+        material.shininess = shininessSlider.value;
+      });
+    }
+    
+  SetupSliders();
   drawScene();
 }main();
