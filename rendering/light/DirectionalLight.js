@@ -3,7 +3,7 @@ import { Light } from "./Light.js";
 export class DirectionalLight extends Light{
     direction;
 
-    constructor(lightColor, ambientIntensity, diffuseIntensity, direction){
+    constructor(lightColor, direction, ambientIntensity, diffuseIntensity){
         super(lightColor, ambientIntensity, diffuseIntensity);
         this.direction = direction;
     }

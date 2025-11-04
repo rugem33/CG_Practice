@@ -48,7 +48,6 @@ vec3 CalculateLight(Light light, vec3 direction, vec3 normal){
         vec3 lightSpecular = light.color * u_material.specularIntensity * specularFactor;
 
         vec3 lightResult = lightAmbient + lightDiffuse + lightSpecular;
-        
         return lightResult;
     }
 
