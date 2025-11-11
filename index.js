@@ -14,6 +14,11 @@ import { Material } from "./rendering/core/Material.js";
 import basicVertex from "./resources/shaders/basicVertex.js";
 import basicFragment from "./resources/shaders/basicFragment.js";
 
+import depthmapVertex from "./resources/shaders/depthmapVertex.js";
+import depthmapFragment from "./resources/shaders/depthmapFragment.js";
+import depthmapDebugFragment from "./resources/shaders/depthmapDebugFragment.js";
+
+depthmapDebugFragment
 
 
 const {mat4, vec4} = glMatrix;
@@ -36,8 +41,13 @@ async function main(){
   let teapotModel = new Model(gl);
   await teapotModel.LoadModel("./resources/models/teapot.obj");
 
+  let quadModel = new Model(gl);
+  await quadModel.LoadModel("./resources/models/quad.obj");
+
   // cube program
   let program = new Shader(gl, basicVertex, basicFragment);
+  let depthmapProgram = new Shader(gl, depthmapVertex, depthmapFragment);
+  let depthmapDebugProgram = new Shader(gl, basicVertex, depthmapDebugFragment);
 
   let renderer = new Renderer(gl);
 
@@ -56,85 +66,56 @@ async function main(){
   let far = 100.0;
   mat4.perspective(projectionMatrix, fovy, aspect, near, far);
 
-  let light = new DirectionalLight([1.0, 1.0, 1.0], [2.0, 1.0, -2.0], 0.1, 1.0);
+  let depthmapWidth = 1024;
+  let depthmapHeight = 1024;
+  let light = new DirectionalLight(gl, [1.0, 1.0, 1.0], [2.0, 1.0, -2.0], 0.1, 1.0, depthmapWidth, depthmapHeight);
 
   let material = new Material(1.0, 64.0);
 
   SetupSliders();
   requestAnimationFrame(drawScene);
 
-  let rotationAngle = 0.0;
-
   // uniform 변수 포함 Draw Call 기능들을 함수로 정의하여 반복 호출(애니메이션 효과)
   function drawScene(){
-
-    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-    rotationAngle += 0.1 * Math.PI / 180.0;
-    
-
-    //---rectangle buffer Setup---//
-    // 실행 가능한 상태의 program을 webgl에 바인딩
-    // gl.bindbuffer()와 유사한 기능
-    // array buffer에 저장된 정점 데이터를 attribute 변수 a_position에 바인딩
-    /*gl.useProgram(program);
-    rectangleVAO.bind(); // rectangle VAO 바인딩*/
-
-    // 모든 프로그램이 동일하게 갖는 값은 uniform 변수로 전달
-
-
-    // rectangle uniform setting
-    /*var location = gl.getUniformLocation(program, "u_color"); // program에서 변수(u_color)의 위치를 가져옴
-    gl.uniform4f(location, 0.8, 0.3, 0.8, 1.0); // location이 가리키고 있는 변수가 4개의 파라미터를 가짐을 알림*/
-    
-
-    /*var offsetLocation = gl.getUniformLocation(program, "u_offset");  // program에서 변수(u_offset)의 위치를 가져옴
-    gl.uniform4f(offsetLocation, x_offset, 0.0, 0.0, 0.0); // x축으로 x_offset만큼 평행이동*/
-    
-    //---Draw Call---//
-    // Draw Call Triangle 
-    // gl.drawArrays(gl.TRIANGLES, 0, 3);
-    
-    // Draw Call Indexed Triangles
-    // index buffer에 저장된 인덱스 개수만큼 삼각형을 그려라
-    /*var primitiveType = gl.TRIANGLES; //삼각형 모드
-    var count = rectangleIB.getCount(); //인덱스 개수
-    var offset = 0; //인덱스 버퍼의 오프셋
-    gl.drawElements(primitiveType, count, gl.UNSIGNED_SHORT, offset);
-
-    gl.useProgram(null); // optional
-    rectangleVAO.unbind(); // rectangle VAO 바인딩 해제
-
-    // triangle draw call
-    //---triangle buffer Setup---//
-    gl.useProgram(triangleprogram);
-    triangleVAO.bind(); // triangle VAO 바인딩
-
-    gl.drawElements(primitiveType, triangleIB.getCount(), gl.UNSIGNED_SHORT, 0);
-
-    gl.useProgram(null); // optional
-    triangleVAO.unbind(); // triangle VAO 바인딩 해제*/
-    renderer.Clear();
-
-    // rectangle draw call
-    program.Bind();
+    light.depthmap.Bind();
+    depthmapProgram.Bind();
     {
-        let modelMatrix = mat4.create();
-        mat4.scale(modelMatrix, modelMatrix, [0.1, 0.1, 0.1]);
-        program.SetUniformMatrix4fv("u_model", modelMatrix);
-        program.SetUniformMatrix4fv("u_view", camera.GetViewMatrix());
-        program.SetUniformMatrix4fv("u_projection", projectionMatrix);
-        program.SetUniform3f("u_eyePosition", camera.eye[0], camera.eye[1], camera.eye[2]);
-        program.SetMaterial(material);
-        checkerTexture.Bind(0);
-        program.SetUniform1i("u_texture", 0);
-        program.SetLight(light);
-        teapotModel.RenderModel(renderer);
+      let modelMatrix = mat4.create();
+      mat4.scale(modelMatrix, modelMatrix, [0.1,0.1,0.1]);
 
+      depthmapProgram.SetUniformMatrix4fv("u_model", modelMatrix);
+      depthmapProgram.SetDepthmapLightTransform(light);
+
+      renderer.Clear();
+      gl.viewport(0, 0, light.depthmapWidth, light.depthmapHeight);
+      teapotModel.RenderModel(renderer);
     }
-    program.Unbind();
-    
+    light.depthmap.Unbind();
+    depthmapProgram.Unbind();
+
+    {
+      webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+      depthmapDebugProgram.Bind();
+      {
+        let modelMatrix = mat4.create();
+        mat4.scale(modelMatrix, modelMatrix, [0.02,0.02,0.02]);
+        mat4.rotateX(modelMatrix, modelMatrix, 3.0 * Math.PI / 2.0);
+        mat4.rotateY(modelMatrix, modelMatrix, Math.PI);
+
+        depthmapDebugProgram.SetUniformMatrix4fv("u_model", modelMatrix);
+        depthmapDebugProgram.SetUniformMatrix4fv("u_view", camera.GetViewMatrix());
+        depthmapDebugProgram.SetUniformMatrix4fv("u_projection", projectionMatrix);
+
+        light.depthmap.Read(0);
+
+        renderer.Clear();
+        quadModel.RenderModel(renderer);
+      }
+      depthmapDebugProgram.Unbind();
+    }
+
     requestAnimationFrame(drawScene);
   }
 
