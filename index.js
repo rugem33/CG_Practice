@@ -47,7 +47,7 @@ async function main(){
   // cube program
   let program = new Shader(gl, basicVertex, basicFragment);
   let depthmapProgram = new Shader(gl, depthmapVertex, depthmapFragment);
-  let depthmapDebugProgram = new Shader(gl, basicVertex, depthmapDebugFragment);
+  // let depthmapDebugProgram = new Shader(gl, basicVertex, depthmapDebugFragment);
 
   let renderer = new Renderer(gl);
 
@@ -93,28 +93,38 @@ async function main(){
     light.depthmap.Unbind();
     depthmapProgram.Unbind();
 
+    program.Bind();
     {
       webglUtils.resizeCanvasToDisplaySize(gl.canvas);
       gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+      
+      renderer.Clear();
 
-      depthmapDebugProgram.Bind();
-      {
-        let modelMatrix = mat4.create();
-        mat4.scale(modelMatrix, modelMatrix, [0.02,0.02,0.02]);
-        mat4.rotateX(modelMatrix, modelMatrix, 3.0 * Math.PI / 2.0);
-        mat4.rotateY(modelMatrix, modelMatrix, Math.PI);
+      let modelMatrix = mat4.create();
+      mat4.scale(modelMatrix, modelMatrix, [0.1,0.1,0.1]);
 
-        depthmapDebugProgram.SetUniformMatrix4fv("u_model", modelMatrix);
-        depthmapDebugProgram.SetUniformMatrix4fv("u_view", camera.GetViewMatrix());
-        depthmapDebugProgram.SetUniformMatrix4fv("u_projection", projectionMatrix);
+      program.SetUniformMatrix4fv("u_model", modelMatrix);
+      program.SetUniformMatrix4fv("u_view", camera.GetViewMatrix());
+      program.SetUniformMatrix4fv("u_projection", projectionMatrix);
+      program.SetUniformMatrix4fv("u_lightSpaceMatrix", light.CalculateLightTransform());
+      
+      checkerTexture.Bind(0);
+      program.SetUniform1i("u_texture", 0);
+      program.SetLight(light);
+      program.SetUniform3f("u_eyePosition", camera.eye[0], camera.eye[1], camera.eye[2]);
+      program.SetMaterial(material);
+      light.depthmap.Read(1);
+      program.SetUniform1i("u_depthMap", 1);
 
-        light.depthmap.Read(0);
+      teapotModel.RenderModel(renderer);
 
-        renderer.Clear();
-        quadModel.RenderModel(renderer);
-      }
-      depthmapDebugProgram.Unbind();
+      modelMatrix = mat4.create();
+      mat4.translate(modelMatrix, modelMatrix, [0.0, -0.8, 0.0]); 
+      mat4.scale(modelMatrix, modelMatrix, [0.1, 0.1, 0.1]);
+      program.SetUniformMatrix4fv("u_model", modelMatrix);
+      quadModel.RenderModel(renderer);
     }
+    program.Unbind();
 
     requestAnimationFrame(drawScene);
   }

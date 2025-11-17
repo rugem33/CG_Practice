@@ -8,10 +8,12 @@ layout(location=2) in vec3 a_normal;
 uniform mat4 u_model;
 uniform mat4 u_projection;
 uniform mat4 u_view;
+uniform mat4 u_lightSpaceMatrix;
 
 out vec2 v_texCoord;
 out vec3 v_normal;
 out vec3 v_worldPosition;
+out vec4 v_lightSpacePosition;
 
 void main() {
     gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);
@@ -20,6 +22,7 @@ void main() {
     v_normal = mat3(transpose(inverse(u_model))) * a_normal; 
 
     v_worldPosition = vec3(u_model * vec4(a_position, 1.0));
+    v_lightSpacePosition = u_lightSpaceMatrix * vec4(v_worldPosition, 1.0);
 }`;
 // Vertex shader - 정점마다 실행되는 셰이더(정점 수만큼 병렬실행)
 // a_position이라는 이름의 입력 변수 선언
