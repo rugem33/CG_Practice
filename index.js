@@ -11,15 +11,16 @@ import { Texture } from "./rendering/core/Texture.js";
 import { DirectionalLight } from "./rendering/light/DirectionalLight.js"; 
 import { Material } from "./rendering/core/Material.js";
 // 아래 두개가 최소한으로 필요한 셰이더
-import basicVertex from "./resources/shaders/basicVertex.js";
-import basicFragment from "./resources/shaders/basicFragment.js";
+//import basicVertex from "./resources/shaders/basicVertex.js";
+//import basicFragment from "./resources/shaders/basicFragment.js";
 
-import depthmapVertex from "./resources/shaders/depthmapVertex.js";
-import depthmapFragment from "./resources/shaders/depthmapFragment.js";
-import depthmapDebugFragment from "./resources/shaders/depthmapDebugFragment.js";
+//import depthmapVertex from "./resources/shaders/depthmapVertex.js";
+//import depthmapFragment from "./resources/shaders/depthmapFragment.js";
+//import depthmapDebugFragment from "./resources/shaders/depthmapDebugFragment.js";
 
-depthmapDebugFragment
-
+import pbrVertex from "./resources/shaders/pbrVertex.js";
+import pbrFragment from "./resources/shaders/pbrFragment.js";
+import { PBRMaterial } from "./rendering/core/PBRMaterial.js";
 
 const {mat4, vec4} = glMatrix;
 
@@ -41,13 +42,16 @@ async function main(){
   let teapotModel = new Model(gl);
   await teapotModel.LoadModel("./resources/models/teapot.obj");
 
-  let quadModel = new Model(gl);
-  await quadModel.LoadModel("./resources/models/quad.obj");
+  // let quadModel = new Model(gl);
+  // await quadModel.LoadModel("./resources/models/quad.obj");
 
   // cube program
-  let program = new Shader(gl, basicVertex, basicFragment);
-  let depthmapProgram = new Shader(gl, depthmapVertex, depthmapFragment);
+  //let program = new Shader(gl, basicVertex, basicFragment);
+  //let depthmapProgram = new Shader(gl, depthmapVertex, depthmapFragment);
   // let depthmapDebugProgram = new Shader(gl, basicVertex, depthmapDebugFragment);
+
+  // pbr program
+  let pbrProgram = new Shader(gl, pbrVertex, pbrFragment);
 
   let renderer = new Renderer(gl);
 
@@ -66,65 +70,59 @@ async function main(){
   let far = 100.0;
   mat4.perspective(projectionMatrix, fovy, aspect, near, far);
 
-  let depthmapWidth = 1024;
+  /*  let depthmapWidth = 1024;
   let depthmapHeight = 1024;
-  let light = new DirectionalLight(gl, [1.0, 1.0, 1.0], [2.0, 1.0, -2.0], 0.1, 1.0, depthmapWidth, depthmapHeight);
+  let light = new DirectionalLight(gl, [1.0, 1.0, 1.0], [2.0, 1.0, -2.0], 0.1, 1.0, depthmapWidth, depthmapHeight);*/
+  
+  // let material = new Material(1.0, 64.0);
 
-  let material = new Material(1.0, 64.0);
+  let lightPositions = [
+    [-10.0, 10.0, 10.0],
+    [10.0, 10.0, 10.0],
+    [-10.0, -10.0, 10.0],
+    [10.0, -10.0, 10.0]
+  ];
+
+  let lightColors = [
+    [300.0, 300.0, 300.0],
+    [300.0, 300.0, 300.0],
+    [300.0, 300.0, 300.0],
+    [300.0, 300.0, 300.0]
+  ];
+
+  let material = new PBRMaterial(    
+    [0.5, 0.0, 0.0],
+    1.0,
+    0.5,
+    1.0
+  );
 
   SetupSliders();
   requestAnimationFrame(drawScene);
 
   // uniform 변수 포함 Draw Call 기능들을 함수로 정의하여 반복 호출(애니메이션 효과)
   function drawScene(){
-    light.depthmap.Bind();
-    depthmapProgram.Bind();
+    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    renderer.Clear();
+
+    pbrProgram.Bind();
     {
       let modelMatrix = mat4.create();
-      mat4.scale(modelMatrix, modelMatrix, [0.1,0.1,0.1]);
-
-      depthmapProgram.SetUniformMatrix4fv("u_model", modelMatrix);
-      depthmapProgram.SetDepthmapLightTransform(light);
-
-      renderer.Clear();
-      gl.viewport(0, 0, light.depthmapWidth, light.depthmapHeight);
-      teapotModel.RenderModel(renderer);
-    }
-    light.depthmap.Unbind();
-    depthmapProgram.Unbind();
-
-    program.Bind();
-    {
-      webglUtils.resizeCanvasToDisplaySize(gl.canvas);
-      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-      
-      renderer.Clear();
-
-      let modelMatrix = mat4.create();
-      mat4.scale(modelMatrix, modelMatrix, [0.1,0.1,0.1]);
-
-      program.SetUniformMatrix4fv("u_model", modelMatrix);
-      program.SetUniformMatrix4fv("u_view", camera.GetViewMatrix());
-      program.SetUniformMatrix4fv("u_projection", projectionMatrix);
-      program.SetUniformMatrix4fv("u_lightSpaceMatrix", light.CalculateLightTransform());
-      
-      checkerTexture.Bind(0);
-      program.SetUniform1i("u_texture", 0);
-      program.SetLight(light);
-      program.SetUniform3f("u_eyePosition", camera.eye[0], camera.eye[1], camera.eye[2]);
-      program.SetMaterial(material);
-      light.depthmap.Read(1);
-      program.SetUniform1i("u_depthMap", 1);
-
-      teapotModel.RenderModel(renderer);
-
-      modelMatrix = mat4.create();
-      mat4.translate(modelMatrix, modelMatrix, [0.0, -0.8, 0.0]); 
       mat4.scale(modelMatrix, modelMatrix, [0.1, 0.1, 0.1]);
-      program.SetUniformMatrix4fv("u_model", modelMatrix);
-      quadModel.RenderModel(renderer);
+
+      pbrProgram.SetUniformMatrix4fv("u_model", modelMatrix);
+      pbrProgram.SetUniformMatrix4fv("u_view", camera.GetViewMatrix());
+      pbrProgram.SetUniformMatrix4fv("u_projection", projectionMatrix);
+      pbrProgram.SetUniform3f("u_eyePosition", camera.eye[0], camera.eye[1], camera.eye[2]);
+    
+      pbrProgram.SetPBRMaterial(material);
+      pbrProgram.SetPBRLight(lightPositions, lightColors);
+
+      teapotModel.RenderModel(renderer);
     }
-    program.Unbind();
+    pbrProgram.Unbind();
 
     requestAnimationFrame(drawScene);
   }
@@ -133,11 +131,18 @@ async function main(){
       const pitchslider = document.getElementById("pitchslider");
       const yawslider = document.getElementById("yawslider");
       const distanceslider = document.getElementById("distanceslider");
-      const directionXSlider = document.getElementById("directionx");
+      /*const directionXSlider = document.getElementById("directionx");
       const directionYSlider = document.getElementById("directiony");
       const directionZSlider = document.getElementById("directionz");
       const specularIntensitySlider = document.getElementById("specularIntensity");
-      const shininessSlider = document.getElementById("shininess");
+      const shininessSlider = document.getElementById("shininess");*/
+
+      const albedoRSlider = document.getElementById("albedoR");
+      const albedoGSlider = document.getElementById("albedoG");
+      const albedoBSlider = document.getElementById("albedoB");
+      const metallicSlider = document.getElementById("metallic");
+      const roughnessSlider = document.getElementById("roughness");
+      const aoSlider = document.getElementById("ao");
 
       pitchslider.addEventListener('input', ()=>{
         camera.pitch = pitchslider.value;
@@ -151,7 +156,7 @@ async function main(){
         camera.distance = distanceslider.value;
         camera.Update();
       });
-      directionXSlider.addEventListener('input', ()=>{
+      /* directionXSlider.addEventListener('input', ()=>{
         light.direction[0] = directionXSlider.value;
       });
       directionYSlider.addEventListener('input', ()=>{
@@ -165,6 +170,25 @@ async function main(){
       });
       shininessSlider.addEventListener('input', ()=>{
         material.shininess = shininessSlider.value;
+      });*/
+
+      albedoRSlider.addEventListener('input', ()=>{
+        material.albedo[0] = albedoRSlider.value;
+      });
+      albedoGSlider.addEventListener('input', ()=>{
+        material.albedo[1] = albedoGSlider.value;
+      });
+      albedoBSlider.addEventListener('input', ()=>{
+        material.albedo[2] = albedoBSlider.value;
+      });
+      metallicSlider.addEventListener('input', ()=>{
+        material.metallic = metallicSlider.value;
+      });
+      roughnessSlider.addEventListener('input', ()=>{
+        material.roughness = roughnessSlider.value;
+      });
+      aoSlider.addEventListener('input', ()=>{
+        material.ao = aoSlider.value;
       });
     }
     
